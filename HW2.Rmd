@@ -1,0 +1,243 @@
+---
+title: "Homework 2"
+author: "Henry Blake - hrb987"
+output:
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
+  html_document:
+    toc: true
+    toc_float: true
+date: "2025-1-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      eval = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.align = "center")
+
+library(readr)
+library(ggplot2)
+library(tidyverse)
+library(rvest)
+
+profs <- read_csv('profs.csv')
+bikes <- read_csv('bikeshare.csv')
+capmetro <- read_csv('capmetro_UT.csv')
+billboard <- read_csv('billboard.csv')
+```
+
+
+```{r}
+capmetro = mutate(capmetro,
+day_of_week = factor(day_of_week,
+levels=c("Mon", "Tue", "Wed","Thu", "Fri", "Sat", "Sun")),
+month = factor(month,
+levels=c("Sep", "Oct","Nov")))
+```
+
+
+# Problem 1: Beauty, or not, in the classroom
+
+## Part A
+
+```{r}
+profs |>
+  ggplot(aes(x = eval)) + geom_histogram(fill = '#619CFF', color = 'black') +
+  labs(
+    title = 'Distribution of Professor Evalutation Scores',
+    x = "Evaluation Score"
+  ) + theme_bw()
+
+fivenum(profs$eval, na.rm = T)
+mean(profs$eval, na.rm = T)
+```
+The distribution of teacher evaluation scores is slightly skewed left and unimodal. It has a min of 2.1, median of 4.0, a max of 5.0, and a mean of 3.998.
+
+## Part B
+
+```{r}
+profs |>
+  ggplot(aes(x = eval, fill = native)) + geom_boxplot() +
+  labs(
+    title = 'Professor Evalutation Scores for Native and Non Native English Speakers',
+    x = "Evaluation Score"
+  ) + theme_bw()
+
+fivenum(profs$eval[profs$native == 'yes'], na.rm = T)
+round(mean(profs$eval[profs$native == 'yes'], na.rm = T),3)
+
+fivenum(profs$eval[profs$native == 'no'], na.rm = T)
+round(mean(profs$eval[profs$native == 'no'], na.rm = T),3)
+```
+
+The graphs and data show that professors who are a native English speaker tend to have a higher average rating. Native professors have an average of 4.018 vs non native's 3.689.
+
+## Part C
+
+```{r}
+profs |>
+  ggplot(aes(x = eval)) + geom_histogram(fill = '#F8766D', color = 'black') +
+  facet_wrap(~gender) +
+  labs(
+    title = 'Professor Evalutation Scores Based on Gender',
+    x = "Evaluation Score"
+  ) + theme_bw()
+
+fivenum(profs$eval[profs$gender == 'male'], na.rm = T)
+round(mean(profs$eval[profs$gender == 'male'], na.rm = T),3)
+
+fivenum(profs$eval[profs$gender == 'female'], na.rm = T)
+round(mean(profs$eval[profs$gender == 'female'], na.rm = T),3)
+```
+
+The graphs and data show that professors who are a male tend to have a higher average rating than female professors. Male professors have an average of 4.069 vs female's 3.901.
+
+## Part D
+
+```{r}
+profs |>
+  ggplot(aes(x = beauty, y = eval)) + geom_point(color = '#619CFF') +
+  geom_smooth(method = 'lm', se = FALSE, color = 'black') +
+  labs(
+    title = 'Professor Evalutation Scores Based on Gender',
+    x = "Evaluation Score"
+  ) + theme_bw()
+  
+cor(profs$beauty, profs$eval)
+  
+```
+
+According to the data, there is a weak, positive, linear relationship between the attractiveness of a professor and their evaluation score. 
+
+# Problem 2: Bike Sharing
+
+## Plot A
+
+```{r}
+bikes |>
+  group_by(hr) |>
+  summarize(avg_rentals = mean(total)) |>
+  ggplot(aes(x = hr, y = avg_rentals)) + geom_line() + labs(
+    title = "Bike Rentals Per Hour of the Day",
+    x = 'Hour of the Day',
+    y = "Average Rentals"
+  ) + theme_bw()
+```
+
+The data shows that the biggest spikes in bike usage happen at around 8 a.m and 5 p.m. This could be due to these being the times where most people travel to work/school. The lowest points, as expected, are late at night and early in the morning.
+
+## Plot B
+
+```{r}
+bikes |>
+  mutate(workingday = ifelse(workingday == 0, 'Weekend', 'Weekday')) |>
+  group_by(hr, workingday) |>
+  summarize(avg_rentals = mean(total)) |>
+  ggplot(aes(x = hr, y = avg_rentals)) + geom_line() + labs(
+    title = "Bike Rentals Per Hour of the Day",
+    x = 'Hour of the Day',
+    y = "Average Rentals") + facet_wrap(~workingday) + theme_bw()
+```
+
+The graphs show that during the weekdays, there are the spikes at 8 a.m and 5 p.m like shown in the combined graph. However on the weekends, the distribution is mostly uni modal. This further proves the belief that the spikes are duen to school/work travel.
+
+## Plot C
+
+```{r}
+bikes$weathersit[bikes$weathersit == 1] = 'Spring'
+bikes$weathersit[bikes$weathersit == 2] = 'Summer'
+bikes$weathersit[bikes$weathersit == 3] = 'Fall'
+bikes$weathersit[bikes$weathersit == 4] = 'Winter'
+bikes |>
+  mutate(workingday = ifelse(workingday == 0, 'Weekend', 'Weekday')) |>
+  filter(hr == '9') |>
+  group_by(weathersit, workingday) |>
+  summarize(avg_rentals = mean(total)) |>
+  ggplot(aes(x = weathersit, y = avg_rentals)) + geom_col(fill = '#F8766D', color = 'black') + facet_wrap(~workingday) + labs(
+    title = "Bike Rentals Per Season and Weekend Status",
+    x = 'Season',
+    y = "Average Rentals") + theme_bw()
+```
+
+The data shows that there are more rentals during weekdays than there are weekends. It also shows that Spring is the most popular for bikes, then summer, then fall. This could be due to the temperature outside and peoiple's willingness to travel outdoors vs in a closed vehicle.
+
+# Problem 3: Capital Metro UT Ridership
+
+## Plot 1
+
+```{r}
+capmetro |>
+  group_by(hour_of_day, day_of_week, month) |>
+  summarize(avg_boardings = mean(boarding)) |>
+  ggplot(aes(x = hour_of_day, y = avg_boardings, color = month)) + geom_line() + facet_wrap(~day_of_week) + labs(
+    title = "Bus Boardings Per Hour, Day of the Week, and Month",
+    x = 'Hour of the Day',
+    y = "Average Boardings") + theme_bw()
+  
+```
+
+The amount of bus boardings are significantly higher during the weekdays than during the weekend. This is most likely due to work and  The change of boarding behavior going from Monday to Friday and September to November could be due to the changing weather and more time off as the holidays hit.
+
+## Plot 2
+
+```{r}
+capmetro |>
+  ggplot(aes(x = temperature, y = boarding, color = weekend)) + geom_point() + facet_wrap(~hour_of_day)
+
+cor(capmetro$temperature, capmetro$boarding)
+```
+
+This graph shows that temperature does not seem to have a noticeable effect on bus departures as the trend of temperature vs average boardings are fairly horizontal. However there is a very weak, positive, linear relationship with a correlation coefficient of .198.
+
+# Problem 4: Wrangling the Billboard Top 100
+
+## Part A
+
+```{r}
+billboard <- billboard |>
+  select(performer, song, year, week, week_position)
+
+billboard |>
+  group_by(performer, song) |>
+  summarize(count = n()) |>
+  arrange(desc(count)) |>
+  head(10)
+```
+
+The top song based on how many weeks it spend in the top 100 is radioactive by Imagine Dragons. No artist had 2 songs in the top 10.
+
+## Part B
+
+```{r}
+billboard |>
+  filter(year > 1958, year < 2021) |>
+  group_by(year) |>
+  summarize(distinct_songs = n_distinct(paste(song, performer))) |>
+  ggplot(aes(x = year, y = distinct_songs)) + geom_line() + labs(
+    title = "Year vs Number of Distinct Songs",
+    x = 'year',
+    y = "Number of Distinct Songs") + theme_bw()
+  
+```
+
+The data shows that musical diversity peaked in the 60s, had a low point in the year 200, and has increased since then to almost its peak in the year 2020.
+
+## Part C
+
+```{r}
+billboard |>
+  filter(year > 1958, year < 2021) |>
+  group_by(performer, song) |>
+  summarize(count = n()) |>
+  filter(count >= 10) |>
+  summarize(count = n()) |>
+  filter(count >= 30) |>
+  arrange(desc(count)) |>
+  ggplot(aes(x = performer, y = count)) + geom_col(fill = '#619CFF', color = 'black') + coord_flip() + theme_bw()
+```
+
+The graph shows that the artist with by far the most amount of 10 week hits is Elton John. Most of the artists are older artists, besides Drake and Taylor Swift. This is most likely just because they have had less time for sonsg to sit on the Billboard Top 100.
